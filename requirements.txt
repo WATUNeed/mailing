@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+alembic
+sqlalchemy[asyncio]
+asyncpg
+aiohttp
+pandas
