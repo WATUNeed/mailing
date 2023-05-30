@@ -8,7 +8,9 @@ from models.schemas.mailing import (
     MailingCreate,
     ShowMailing,
     MailingEdit,
-    ShowMailingAPIResponse, ShowStatisticsByMailing, ShowStatisticsMailings
+    ShowMailingAPIResponse,
+    ShowStatisticsByMailing,
+    ShowStatisticsMailings
 )
 from models.schemas.message import ShowMessages, ShowMessage, CreateMessage
 from services.customer import CustomerDAL
