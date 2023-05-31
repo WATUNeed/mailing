@@ -2,6 +2,7 @@ from typing import Generator
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from contextlib import asynccontextmanager
 
 from settings import settings
 
@@ -16,6 +17,7 @@ def create_db_session() -> AsyncSession:
     return async_session()
 
 
+@asynccontextmanager
 async def get_session_generator() -> Generator[AsyncSession, None, None]:
     """
     Connects to the database.

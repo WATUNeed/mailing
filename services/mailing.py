@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from dataclasses import dataclass, asdict
 from datetime import datetime
 import uuid
@@ -84,6 +85,7 @@ class MailingDAL(BaseDAL):
         """
         result = await self.db_session.execute(select(Mailing).where(Mailing.id == id))
         mailing: Mailing = result.scalars().one()
+        await self.db_session.close()
         mailing.start_date = start_date
         mailing.message = message
         mailing.filters = filters
@@ -144,6 +146,7 @@ class MailingDAL(BaseDAL):
             filters=mailing.filters,
             expiry_date=get_current_date() + pd.DateOffset(minutes=settings.MAILING_OFFSET_SEC)
         )
+        await mailing_dal.db_session.close()
         return await MessageDAL.send_messages(id)
 
     @staticmethod
@@ -165,7 +168,9 @@ class MailingDAL(BaseDAL):
             .where(Mailing.start_date > queue_date)
             .order_by(Mailing.start_date)
         )
+        await session.close()
 
+        logging.info('A new mailing list queue has been created.')
         async for mailing in async_generator(mailings.scalars()):
             is_expiry_queue = await MailingDAL._wait_and_check_on_expiry_queue(mailing.start_date, queue_date)
 
@@ -173,6 +178,7 @@ class MailingDAL(BaseDAL):
                 return
 
             await MessageDAL.send_messages(mailing_id=mailing.id)
+        logging.info('The mailing queue has been completed.')
 
     @catch_exceptions
     async def get_statistics_by_mailing(self, mailing_id: uuid.UUID) -> ShowStatisticsByMailing:
@@ -181,6 +187,7 @@ class MailingDAL(BaseDAL):
         :param mailing_id:
         :return:
         """
+        logging.info(f'Mailing {mailing_id} statistics have been requested.')
         current_datetime = get_current_date()
 
         query = select(Mailing).options(selectinload(Mailing.messages)).where(Mailing.id == mailing_id)
@@ -213,6 +220,7 @@ class MailingDAL(BaseDAL):
         Outputs statistics on all mailings.
         :return:
         """
+        logging.info('A request to create statistics for all mailing lists.')
         query = select(Mailing).options(selectinload(Mailing.messages))
         result = await self.db_session.execute(query)
         mailings = result.scalars().all()
@@ -240,6 +248,7 @@ class MailingDAL(BaseDAL):
         async for mailing in async_generator(mailings):
             mailing_dal = MailingDAL(create_db_session())
             statistics = await mailing_dal.get_statistics_by_mailing(mailing.id)
+            await mailing_dal.db_session.close()
 
             if mailing.expiry_date < current_datetime:
                 result.completed_mailings_count += 1

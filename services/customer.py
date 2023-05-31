@@ -70,6 +70,7 @@ class CustomerDAL(BaseDAL):
         self.db_session = create_db_session()
         await self.db_session.execute(delete(Customer).where(Customer.id == id))
         await self.db_session.commit()
+        await self.db_session.close()
         return customer
 
     @catch_exceptions

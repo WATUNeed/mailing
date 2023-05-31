@@ -1,4 +1,5 @@
 import datetime
+import logging
 import uuid
 from typing import Generator
 
@@ -88,6 +89,8 @@ class MessageDAL(BaseDAL):
 
         mailing = await mailing_dal.get_mailing_by_id(mailing_id)
         customers = await customers_dal.get_customers_by_filter(filters=mailing.filters)
+        await mailing_dal.db_session.close()
+        await customers_dal.db_session.close()
         with_errors = await MessageDAL._start_mailing(customers, mailing)
 
         if with_errors:
@@ -104,6 +107,7 @@ class MessageDAL(BaseDAL):
         :param mailing:
         :return:
         """
+        logging.info(f'The mailing list {mailing.id} has been started.')
         with_errors = False
         async for id, customer in async_enumerate(customers):
             message_dal = MessageDAL(create_db_session())
@@ -130,4 +134,7 @@ class MessageDAL(BaseDAL):
                     customer_id=customer.id
                 )
                 with_errors = True
+            finally:
+                await message_dal.db_session.close()
+        logging.info(f'The mailing list {mailing.id} has been completed.')
         return with_errors

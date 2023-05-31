@@ -29,6 +29,13 @@ class Settings(pydantic.BaseSettings):
     DB_USER: str = Field(default=os.getenv('DB_USER'))
     DB_PASS: str = Field(default=os.getenv('DB_PASS'))
 
+    # File logging settings.
+    FILE_LOGGING_LEVEL: int = Field(logging.INFO)
+    FILE_LOGGING_FILENAME: str = Field("logs/log")
+    FILE_LOGGING_FORMAT: str = Field("%(asctime)s [%(levelname)s]: %(message)s")
+    FILE_LOGGING_DATEFMT: str = Field("%Y-%m-%d %H:%M:%S")
+    FILE_LOGGING_FILEMODE: str = Field('a+')
+
     # External mailing API settings.
     MAILING_API_URL: str = Field(default='https://probe.fbrq.cloud/v1/send/1')
     MAILING_API_HEADERS: dict = Field(default={
@@ -56,11 +63,22 @@ class Settings(pydantic.BaseSettings):
             'host': self.WEB_HOST,
             'port': self.WEB_PORT,
             'reload': self.RELOAD,
+            'log_level': self.LOGGING_LEVEL
         }
 
     @property
     def get_db_url(self) -> str:
         return f'{self.DB_DRIVER}://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}'
+
+    @property
+    def get_file_logging_attributes(self) -> dict[str, int | str]:
+        return {
+            'level': self.FILE_LOGGING_LEVEL,
+            'filename': self.FILE_LOGGING_FILENAME,
+            'format': self.FILE_LOGGING_FORMAT,
+            'datefmt': self.FILE_LOGGING_DATEFMT,
+            'filemode': self.FILE_LOGGING_FILEMODE
+        }
 
 
 settings = Settings()
