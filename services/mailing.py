@@ -144,7 +144,7 @@ class MailingDAL(BaseDAL):
             start_date=get_current_date(),
             message=mailing.message,
             filters=mailing.filters,
-            expiry_date=get_current_date() + pd.DateOffset(minutes=settings.MAILING_OFFSET_SEC)
+            expiry_date=get_current_date() + pd.DateOffset(minutes=settings.MAILING_OFFSET_MIN)
         )
         await mailing_dal.db_session.close()
         return await MessageDAL.send_messages(id)

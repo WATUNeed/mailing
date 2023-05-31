@@ -1,4 +1,5 @@
 fastapi
+fastapi-cache2[redis]
 uvicorn
 pydantic
 sqlalchemy
@@ -7,3 +8,4 @@ sqlalchemy[asyncio]
 asyncpg
 aiohttp
 pandas
+redis

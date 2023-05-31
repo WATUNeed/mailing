@@ -29,6 +29,10 @@ class Settings(pydantic.BaseSettings):
     DB_USER: str = Field(default=os.getenv('DB_USER'))
     DB_PASS: str = Field(default=os.getenv('DB_PASS'))
 
+    # Redis
+    REDIS_HOST: str = Field(default=os.getenv('REDIS_HOST'))
+    REDIS_PORT: int = Field(default=os.getenv('REDIS_PORT'))
+
     # File logging settings.
     FILE_LOGGING_LEVEL: int = Field(logging.INFO)
     FILE_LOGGING_FILENAME: str = Field("logs/log")
@@ -43,10 +47,11 @@ class Settings(pydantic.BaseSettings):
         'Authorization': f'Bearer {os.getenv("AUTH_TOKEN")}',
         'Content-Type': 'application/json',
     })
-    MAILING_OFFSET_SEC: int = Field(default=5)
+    MAILING_OFFSET_MIN: int = Field(default=5)
     TIMEOUT: int = Field(default=20)
     LATEST_QUEUE_DATE: datetime = Field(default=get_current_date())
     WAITING_TIME: int = 5
+    EXPIRY_TIME_SEC: int = 60
 
     @property
     def get_backend_app_attributes(self) -> dict[str, str | bool | None]:

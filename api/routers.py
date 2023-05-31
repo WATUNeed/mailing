@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import Depends, APIRouter
+from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.controllers import (
@@ -36,7 +37,7 @@ from models.schemas.message import (
 )
 
 from repository.session import get_session_generator
-
+from settings import settings
 
 customer_router = APIRouter(
     prefix='/customer',
@@ -123,6 +124,7 @@ async def send_mailing(
 
 
 @statistics_router.get('/by_id', response_model=ShowStatisticsByMailing)
+@cache(expire=settings.EXPIRY_TIME_SEC)
 async def get_statistics_by_id(
         mailing_id: uuid.UUID,
         session: AsyncSession = Depends(get_session_generator)
@@ -131,6 +133,7 @@ async def get_statistics_by_id(
 
 
 @statistics_router.get('/all', response_model=ShowStatisticsMailings)
+@cache(expire=settings.EXPIRY_TIME_SEC)
 async def get_statistics_mailings(
         session: AsyncSession = Depends(get_session_generator)
 ) -> ShowStatisticsMailings:
@@ -146,6 +149,7 @@ async def create_message(
 
 
 @message_router.get('/list', response_model=ShowMessages)
+@cache(expire=settings.EXPIRY_TIME_SEC)
 async def get_messages(
         session: AsyncSession = Depends(get_session_generator)
 ) -> ShowMessages:

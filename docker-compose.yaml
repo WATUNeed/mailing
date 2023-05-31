@@ -1,6 +1,12 @@
 version: '3.3'
 
 services:
+  redis:
+    image: "redis:alpine"
+    hostname: redis
+    ports:
+      - "6379:6379"
+
   db:
     container_name: pg_db
     image: postgres:alpine
@@ -22,10 +28,13 @@ services:
     entrypoint: ./docker-entrypoint.sh
     ports:
       - 8080:8000
+    environment:
+      - WAIT_HOSTS=redis:6379
     env_file:
       - .env
     depends_on:
       - db
+      - redis
     volumes:
       - api:/app/repository/migration/versions
 
@@ -33,4 +42,6 @@ volumes:
   db:
     driver: local
   api:
+    driver: local
+  redis:
     driver: local
