@@ -137,16 +137,16 @@ async def get_statistics_mailings(
     return await get_statistics_mailings_controller(session=session)
 
 
-@message_router.get('/list', response_model=ShowMessages)
-async def get_messages(
-        session: AsyncSession = Depends(get_session_generator)
-) -> ShowMessages:
-    return await get_messages_controller(session=session)
-
-
 @message_router.post('/create', response_model=ShowMessage)
 async def create_message(
         body: CreateMessage,
         session: AsyncSession = Depends(get_session_generator)
 ) -> ShowMessage:
     return await create_message_controller(body, session=session)
+
+
+@message_router.get('/list', response_model=ShowMessages)
+async def get_messages(
+        session: AsyncSession = Depends(get_session_generator)
+) -> ShowMessages:
+    return await get_messages_controller(session=session)

@@ -142,7 +142,7 @@ class MailingDAL(BaseDAL):
             start_date=get_current_date(),
             message=mailing.message,
             filters=mailing.filters,
-            expiry_date=get_current_date() + pd.DateOffset(minutes=5)
+            expiry_date=get_current_date() + pd.DateOffset(minutes=settings.MAILING_OFFSET_SEC)
         )
         return await MessageDAL.send_messages(id)
 
@@ -243,7 +243,7 @@ class MailingDAL(BaseDAL):
 
             if mailing.expiry_date < current_datetime:
                 result.completed_mailings_count += 1
-            elif statistics.expiry_date >= current_datetime:
+            else:
                 result.uncompleted_mailings_count += 1
 
             result.total_delivered_messages += statistics.delivered_count

@@ -36,6 +36,7 @@ class Settings(pydantic.BaseSettings):
         'Authorization': f'Bearer {os.getenv("AUTH_TOKEN")}',
         'Content-Type': 'application/json',
     })
+    MAILING_OFFSET_SEC: int = Field(default=5)
     TIMEOUT: int = Field(default=20)
     LATEST_QUEUE_DATE: datetime = Field(default=get_current_date())
     WAITING_TIME: int = 5
