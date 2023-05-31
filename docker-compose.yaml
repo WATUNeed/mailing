@@ -14,8 +14,8 @@ services:
     volumes:
       - db:/var/lib/postgresql/data
       - ./init_db.sh:/docker-entrypoint-initdb.d/init_db.sh
-    expose:
-      - 5432
+    ports:
+      - "5432:5432"
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASS}
@@ -27,7 +27,7 @@ services:
     build: .
     entrypoint: ./docker-entrypoint.sh
     ports:
-      - 8080:8000
+      - "8080:8000"
     environment:
       - WAIT_HOSTS=redis:6379
     env_file:

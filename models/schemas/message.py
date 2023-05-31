@@ -43,7 +43,7 @@ class _MessageFull(_MessageWithoutId):
 # input schemes
 class SendMessages(BaseModel):
     mailing_id: uuid.UUID
-    filters: PositiveInt = Field(default=79270000000)
+    filters: PositiveInt = Field(default=927)
 
     @validator('mailing_id')
     def validate_id(cls, value):
