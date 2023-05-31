@@ -39,7 +39,7 @@ async def app_startup():
     session = create_db_session()
     await MailingDAL(db_session=session).run_mailing_queue()
 
-    redis_conn = aioredis.from_url(f'redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}', encoding='utf8', decode_responses=True)
+    redis_conn = aioredis.from_url(**settings.get_redis_attributes)
     FastAPICache.init(RedisBackend(redis_conn), prefix='fastapi-cache')
 
     logging.info('Application startup complete.')

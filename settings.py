@@ -85,5 +85,13 @@ class Settings(pydantic.BaseSettings):
             'filemode': self.FILE_LOGGING_FILEMODE
         }
 
+    @property
+    def get_redis_attributes(self) -> dict[str, str | int | bool]:
+        return {
+            'url': f'redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}',
+            'encoding': 'utf8',
+            'decode_responses': True
+        }
+
 
 settings = Settings()
