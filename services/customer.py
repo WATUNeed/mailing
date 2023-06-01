@@ -7,11 +7,12 @@ from sqlalchemy import select, delete
 from models.db import Customer
 from repository.session import create_db_session
 from services.dals import BaseDAL
-from utils.decorators import catch_exceptions
+from utils.decorators import catch_exceptions, services_request
 
 
 class CustomerDAL(BaseDAL):
     # Contains the customer's business logic.
+    @services_request
     @catch_exceptions
     async def create_customer(self, phone: int, code: int, time_zone: str) -> Customer:
         """
@@ -26,6 +27,7 @@ class CustomerDAL(BaseDAL):
         await self.db_session.flush()
         return new_customer
 
+    @services_request
     @catch_exceptions
     async def get_customers(self) -> Generator[Customer, None, None]:
         """
@@ -35,6 +37,7 @@ class CustomerDAL(BaseDAL):
         customers = await self.db_session.execute(select(Customer))
         return (item for item in customers.scalars())
 
+    @services_request
     @catch_exceptions
     async def edit_customer(self, id: uuid.UUID, phone: int, code: int, time_zone: str) -> Customer:
         """
@@ -53,6 +56,14 @@ class CustomerDAL(BaseDAL):
         await self.db_session.commit()
         return customer
 
+    @services_request
+    @catch_exceptions
+    async def get_customer(self, id: uuid.UUID) -> Customer:
+        result = await self.db_session.execute(select(Customer).where(Customer.id == id).limit(1))
+        customer = result.scalars().one()
+        return customer
+
+    @services_request
     @catch_exceptions
     async def delete_customer(self, id: uuid.UUID) -> Customer:
         """
@@ -60,19 +71,17 @@ class CustomerDAL(BaseDAL):
         :param id:
         :return:
         """
-        customer = await self.db_session.execute(select(Customer).where(Customer.id == id).limit(1))
-        customer = customer.scalars().one()
-        await self.db_session.close()
+
+        customer = await CustomerDAL(create_db_session()).get_customer(id)
 
         if not customer:
             return HTTPException(status_code=404, detail='Customer is not found')
 
-        self.db_session = create_db_session()
         await self.db_session.execute(delete(Customer).where(Customer.id == id))
         await self.db_session.commit()
-        await self.db_session.close()
         return customer
 
+    @services_request
     @catch_exceptions
     async def get_customers_by_filter(self, filters: int) -> Generator[Customer, None, None]:
         """

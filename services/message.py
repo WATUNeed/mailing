@@ -12,12 +12,13 @@ from settings import settings
 from models.db import Message, MessageStates, Customer, Mailing
 
 from utils.async_utils import async_enumerate
-from utils.decorators import catch_exceptions
+from utils.decorators import catch_exceptions, services_request
 from utils.time_utils import get_current_date
 
 
 class MessageDAL(BaseDAL):
     # Describes the business logic of the message.
+    @services_request
     @catch_exceptions
     async def create_message(
             self,
@@ -44,6 +45,7 @@ class MessageDAL(BaseDAL):
         await self.db_session.commit()
         return new_message
 
+    @services_request
     @catch_exceptions
     async def get_messages(self) -> Generator[Message, None, None]:
         """
@@ -84,13 +86,9 @@ class MessageDAL(BaseDAL):
         from services.mailing import MailingDAL
         from services.customer import CustomerDAL
 
-        mailing_dal = MailingDAL(create_db_session())
-        customers_dal = CustomerDAL(create_db_session())
+        mailing = await MailingDAL(create_db_session()).get_mailing_by_id(mailing_id)
 
-        mailing = await mailing_dal.get_mailing_by_id(mailing_id)
-        customers = await customers_dal.get_customers_by_filter(filters=mailing.filters)
-        await mailing_dal.db_session.close()
-        await customers_dal.db_session.close()
+        customers = await CustomerDAL(create_db_session()).get_customers_by_filter(filters=mailing.filters)
         with_errors = await MessageDAL._start_mailing(customers, mailing)
 
         if with_errors:

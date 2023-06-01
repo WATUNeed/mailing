@@ -23,12 +23,13 @@ async def get_session_generator() -> Generator[AsyncSession, None, None]:
     Connects to the database.
     :return: Session.
     """
+    session: AsyncSession = None
     try:
         session = create_db_session()
         yield session
-    except:
+    except Exception as e:
         await session.rollback()
-        raise
+        raise e
     finally:
         await session.commit()
         await session.close()

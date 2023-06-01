@@ -40,8 +40,7 @@ async def app_startup():
     main_router.include_router(statistics_router)
     app.include_router(main_router)
 
-    session = create_db_session()
-    await MailingDAL(db_session=session).run_mailing_queue()
+    await MailingDAL(create_db_session()).run_mailing_queue()
 
     # Configuration redis
     redis_conn = aioredis.from_url(**settings.get_redis_attributes)

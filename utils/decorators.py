@@ -20,16 +20,10 @@ def catch_exceptions(func: Any) -> Any:
     return wrapped
 
 
-def request(func: Any) -> Any:
-    """
-    Decorator for accessing the database.
-    Creates an asynchronous session.
-    Rolls back changes if there is an error.
-    :param func:
-    :return: Callable func
-    """
-    async def wrapped(*args, session, **kwargs) -> Any:
-        async with session as session:
-            async with session.begin():
-                return await func(*args, session, **kwargs)
+def services_request(func: Any) -> Any:
+    async def wrapped(self, *args, **kwargs) -> Any:
+        async with self.db_session as session:
+            self.db_session = session
+            return await func(self, *args, **kwargs)
+
     return wrapped

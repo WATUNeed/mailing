@@ -7,7 +7,7 @@ from typing import Any, NamedTuple
 import pandas as pd
 
 from fastapi import HTTPException
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, ScalarResult
 from sqlalchemy.orm import selectinload
 
 from models.schemas.mailing import ShowStatisticsByMailing, ShowStatisticsMailings
@@ -17,7 +17,7 @@ from models.db import Mailing, MessageStates
 from services.dals import BaseDAL, ResponseCode
 from settings import settings
 from utils.async_utils import async_generator
-from utils.decorators import catch_exceptions
+from utils.decorators import catch_exceptions, services_request
 from utils.time_utils import get_current_date
 
 
@@ -43,12 +43,13 @@ class MailingDAL(BaseDAL):
         """
         async def wrapped(self, *args, **kwargs) -> Any:
             result = await func(self, *args, **kwargs)
-            asyncio.create_task(MailingDAL.run_mailing_queue())
+            asyncio.create_task(MailingDAL(create_db_session()).run_mailing_queue())
             return result
 
         return wrapped
 
     @catch_exceptions
+    @services_request
     @update_queue
     async def create_mailing(self, start_date: datetime, message: str, filters: int, expiry_date: datetime) -> Mailing:
         """
@@ -64,6 +65,7 @@ class MailingDAL(BaseDAL):
         await self.db_session.commit()
         return new_mailing
 
+    @services_request
     @catch_exceptions
     @update_queue
     async def edit_mailing(
@@ -85,7 +87,6 @@ class MailingDAL(BaseDAL):
         """
         result = await self.db_session.execute(select(Mailing).where(Mailing.id == id))
         mailing: Mailing = result.scalars().one()
-        await self.db_session.close()
         mailing.start_date = start_date
         mailing.message = message
         mailing.filters = filters
@@ -93,6 +94,7 @@ class MailingDAL(BaseDAL):
         await self.db_session.commit()
         return mailing
 
+    @services_request
     @catch_exceptions
     @update_queue
     async def delete_mailing(self, id: uuid.UUID) -> Mailing:
@@ -111,6 +113,7 @@ class MailingDAL(BaseDAL):
         await self.db_session.commit()
         return mailing
 
+    @services_request
     @catch_exceptions
     async def get_mailing_by_id(self, id: uuid.UUID) -> Mailing:
         """
@@ -120,13 +123,13 @@ class MailingDAL(BaseDAL):
         """
         mailing = await self.db_session.execute(select(Mailing).where(Mailing.id == id).limit(1))
         mailing = mailing.scalars().one()
-        await self.db_session.close()
 
         if not mailing:
             raise HTTPException(status_code=404, detail='Mailing is not found')
 
         return mailing
 
+    @services_request
     @catch_exceptions
     @update_queue
     async def send_mailing(self, id: uuid.UUID) -> ResponseCode:
@@ -138,20 +141,29 @@ class MailingDAL(BaseDAL):
         from services.message import MessageDAL
 
         mailing = await self.get_mailing_by_id(id)
-        mailing_dal = MailingDAL(create_db_session())
-        await mailing_dal.edit_mailing(
+        await MailingDAL(create_db_session()).edit_mailing(
             id=mailing.id,
             start_date=get_current_date(),
             message=mailing.message,
             filters=mailing.filters,
             expiry_date=get_current_date() + pd.DateOffset(minutes=settings.MAILING_OFFSET_MIN)
         )
-        await mailing_dal.db_session.close()
         return await MessageDAL.send_messages(id)
 
-    @staticmethod
+    @services_request
     @catch_exceptions
-    async def run_mailing_queue():
+    async def get_actual_mailings(self, date: datetime = get_current_date()) -> ScalarResult[Mailing]:
+        result = await self.db_session.execute(
+            select(Mailing)
+            .where(Mailing.start_date > date)
+            .order_by(Mailing.start_date)
+        )
+        mailings = result.scalars()
+        return mailings
+
+    @services_request
+    @catch_exceptions
+    async def run_mailing_queue(self):
         """
         Retrieves a list of current mailings from the database and creates a queue in order of when the mailing starts.
         Wait for the closest mailing to start and start the mailing. Torts the queue if a newer queue has appeared.
@@ -160,26 +172,17 @@ class MailingDAL(BaseDAL):
         from services.message import MessageDAL
 
         queue_date = get_current_date()
-        session = create_db_session()
-        mailings = await session.execute(
-            select(
-                Mailing
-            )
-            .where(Mailing.start_date > queue_date)
-            .order_by(Mailing.start_date)
-        )
-        await session.close()
+        mailings = await self.get_actual_mailings(queue_date)
 
-        logging.info('A new mailing list queue has been created.')
-        async for mailing in async_generator(mailings.scalars()):
+        async for mailing in async_generator(mailings):
             is_expiry_queue = await MailingDAL._wait_and_check_on_expiry_queue(mailing.start_date, queue_date)
 
             if is_expiry_queue:
                 return
 
             await MessageDAL.send_messages(mailing_id=mailing.id)
-        logging.info('The mailing queue has been completed.')
 
+    @services_request
     @catch_exceptions
     async def get_statistics_by_mailing(self, mailing_id: uuid.UUID) -> ShowStatisticsByMailing:
         """
@@ -193,7 +196,6 @@ class MailingDAL(BaseDAL):
         query = select(Mailing).options(selectinload(Mailing.messages)).where(Mailing.id == mailing_id)
         result = await self.db_session.execute(query)
         mailing = result.scalar()
-        await self.db_session.close()
 
         if mailing.expiry_date > current_datetime:
             return ShowStatisticsByMailing(
@@ -214,17 +216,16 @@ class MailingDAL(BaseDAL):
             undelivered_messages=undelivered_messages,
         )
 
+    @services_request
     @catch_exceptions
     async def get_statistics_mailings(self):
         """
         Outputs statistics on all mailings.
         :return:
         """
-        logging.info('A request to create statistics for all mailing lists.')
         query = select(Mailing).options(selectinload(Mailing.messages))
         result = await self.db_session.execute(query)
         mailings = result.scalars().all()
-        await self.db_session.close()
         statistics = await MailingDAL._counting_statistics_by_mailings(mailings)
         return ShowStatisticsMailings(**asdict(statistics))
 
@@ -246,9 +247,7 @@ class MailingDAL(BaseDAL):
         )
 
         async for mailing in async_generator(mailings):
-            mailing_dal = MailingDAL(create_db_session())
-            statistics = await mailing_dal.get_statistics_by_mailing(mailing.id)
-            await mailing_dal.db_session.close()
+            statistics = await MailingDAL(create_db_session()).get_statistics_by_mailing(mailing.id)
 
             if mailing.expiry_date < current_datetime:
                 result.completed_mailings_count += 1
