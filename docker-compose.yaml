@@ -28,8 +28,6 @@ services:
     entrypoint: ./docker-entrypoint.sh
     ports:
       - "8080:8000"
-    environment:
-      - WAIT_HOSTS=redis:6379
     env_file:
       - .env
     depends_on:
@@ -37,6 +35,7 @@ services:
       - redis
     volumes:
       - api:/app/repository/migration/versions
+      - ./logs:/app/logs
 
 volumes:
   db:

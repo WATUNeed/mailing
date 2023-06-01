@@ -30,15 +30,32 @@ class Settings(pydantic.BaseSettings):
     DB_PASS: str = Field(default=os.getenv('DB_PASS'))
 
     # Redis
+    REDIS_DRIVER: str = Field(default='redis')
     REDIS_HOST: str = Field(default=os.getenv('REDIS_HOST'))
     REDIS_PORT: int = Field(default=os.getenv('REDIS_PORT'))
+    REDIS_ENCODING: str = Field(default='utf8')
+    DECODE_RESPONSES: bool = Field(default=True)
 
-    # File logging settings.
-    FILE_LOGGING_LEVEL: int = Field(logging.INFO)
-    FILE_LOGGING_FILENAME: str = Field("logs/log")
+    # File logging.
+    FILE_LOGGING_LEVEL: int = Field(logging.ERROR)
+    FILE_MAX_BYTES: int = Field(default=10 * 1024 * 1024)  # 10MB
+    FILET_BACKUP_COUNT: int = Field(default=5)
+    FILE_LOGGING_FILENAME: str = Field("logs/error_log")
     FILE_LOGGING_FORMAT: str = Field("%(asctime)s [%(levelname)s]: %(message)s")
     FILE_LOGGING_DATEFMT: str = Field("%Y-%m-%d %H:%M:%S")
-    FILE_LOGGING_FILEMODE: str = Field('a+')
+    FILE_LOGGING_MODE: str = Field('a+')
+
+    # Middleware
+    ORIGINS: list[str] = Field(default=[
+            'http://localhost',
+            'http://localhost:8080',
+            f'http://{WEB_HOST}:{WEB_PORT}',
+        ]
+    )
+    ALLOW_METHODS: list[str] = Field(default=['GET', 'POST', 'PUT', 'DELETE'])
+    ALLOW_HEADERS: list[str] = Field(default=['Content-Type', 'Set-Cookie', 'Access-Control-Allow-Headers',
+                                              'Access-Control-Allow-Origin', 'Authorization'])
+    ALLOW_CREDENTIALS: bool = Field(default=True)
 
     # External mailing API settings.
     MAILING_API_URL: str = Field(default='https://probe.fbrq.cloud/v1/send/1')
@@ -63,7 +80,7 @@ class Settings(pydantic.BaseSettings):
         }
 
     @property
-    def get_uvicorn_app_attributes(self) -> dict[str, str | bool | None]:
+    def get_uvicorn_attributes(self) -> dict[str, str | bool | None]:
         return {
             'host': self.WEB_HOST,
             'port': self.WEB_PORT,
@@ -76,21 +93,36 @@ class Settings(pydantic.BaseSettings):
         return f'{self.DB_DRIVER}://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}'
 
     @property
-    def get_file_logging_attributes(self) -> dict[str, int | str]:
+    def get_redis_attributes(self) -> dict[str, str | int | bool]:
         return {
-            'level': self.FILE_LOGGING_LEVEL,
-            'filename': self.FILE_LOGGING_FILENAME,
-            'format': self.FILE_LOGGING_FORMAT,
-            'datefmt': self.FILE_LOGGING_DATEFMT,
-            'filemode': self.FILE_LOGGING_FILEMODE
+            'url': f'{self.REDIS_DRIVER}://{self.REDIS_HOST}:{self.REDIS_PORT}',
+            'encoding': self.REDIS_ENCODING,
+            'decode_responses': self.DECODE_RESPONSES
         }
 
     @property
-    def get_redis_attributes(self) -> dict[str, str | int | bool]:
+    def get_middleware_attributes(self) -> dict[str, str | list[str]]:
         return {
-            'url': f'redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}',
-            'encoding': 'utf8',
-            'decode_responses': True
+            'allow_origins': self.ORIGINS,
+            'allow_methods': self.ALLOW_METHODS,
+            'allow_headers': self.ALLOW_HEADERS,
+            'allow_credentials': self.ALLOW_CREDENTIALS,
+        }
+
+    @property
+    def get_file_logging_class_attributes(self) -> dict[str, str | int]:
+        return {
+            'filename': self.FILE_LOGGING_FILENAME,
+            'maxBytes': self.FILE_MAX_BYTES,
+            'backupCount': self.FILET_BACKUP_COUNT,
+            'mode': self.FILE_LOGGING_MODE
+        }
+
+    @property
+    def get_file_logging_formatter_attributes(self) -> dict[str, str]:
+        return {
+            'fmt': self.FILE_LOGGING_FORMAT,
+            'datefmt': self.FILE_LOGGING_DATEFMT
         }
 
 

@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from redis import asyncio as aioredis
+from starlette.middleware.cors import CORSMiddleware
 
 from api.routers import customer_router, mailing_router, message_router, statistics_router
 from repository.session import create_db_session
@@ -13,8 +14,10 @@ from settings import settings
 
 from fastapi import FastAPI
 
+from utils.logger_config import configurate_logging_file
 
 app = FastAPI(**settings.get_backend_app_attributes)
+app.add_middleware(CORSMiddleware, **settings.get_middleware_attributes)
 
 
 @app.on_event("startup")
@@ -25,7 +28,9 @@ async def app_startup():
     """
 
     # logging file setup
-    logging.basicConfig(**settings.get_file_logging_attributes)
+    # Configure logging
+    configurate_logging_file()
+    # logging.basicConfig(**settings.get_file_logging_attributes)
 
     # Configuration router
     main_router = APIRouter()
@@ -35,7 +40,6 @@ async def app_startup():
     main_router.include_router(statistics_router)
     app.include_router(main_router)
 
-    # Creating a mailing queue
     session = create_db_session()
     await MailingDAL(db_session=session).run_mailing_queue()
 
@@ -47,4 +51,4 @@ async def app_startup():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app=app, **settings.get_uvicorn_app_attributes)
+    uvicorn.run(app=app, **settings.get_uvicorn_attributes)
