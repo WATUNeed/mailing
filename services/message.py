@@ -47,12 +47,20 @@ class MessageDAL(BaseDAL):
 
     @services_request
     @catch_exceptions
-    async def get_messages(self) -> Generator[Message, None, None]:
+    async def get_messages(
+            self,
+            limit: int = 10,
+            offset: int = 0,
+            pagination: bool = True
+    ) -> Generator[Message, None, None]:
         """
         Outputs list of message from the database.
         :return:
         """
-        messages = await self.db_session.execute(select(Message))
+        if pagination:
+            messages = await self.db_session.execute(select(Message).limit(limit).offset(offset))
+        else:
+            messages = await self.db_session.execute(select(Message))
         return (item for item in messages.scalars())
 
     @staticmethod

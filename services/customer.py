@@ -29,12 +29,20 @@ class CustomerDAL(BaseDAL):
 
     @services_request
     @catch_exceptions
-    async def get_customers(self) -> Generator[Customer, None, None]:
+    async def get_customers(
+            self,
+            limit: int = 10,
+            offset: int = 0,
+            pagination: bool = True
+    ) -> Generator[Customer, None, None]:
         """
         Get list of customer from database.
         :return: List of customers
         """
-        customers = await self.db_session.execute(select(Customer))
+        if pagination:
+            customers = await self.db_session.execute(select(Customer).limit(limit).offset(offset))
+        else:
+            customers = await self.db_session.execute(select(Customer))
         return (item for item in customers.scalars())
 
     @services_request

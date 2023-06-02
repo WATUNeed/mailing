@@ -18,6 +18,7 @@ from api.controllers import (
     get_statistics_mailings_controller,
     delete_mailing_controller
 )
+from api.dependencies import Paginator, get_paginator_params
 from models.schemas.customer import (
     ShowCustomer,
     CustomerCreate,
@@ -37,28 +38,28 @@ from models.schemas.message import (
     ShowMessage,
     CreateMessage
 )
-
 from repository.session import get_session_generator
 from settings import settings
 
+
 customer_router = APIRouter(
     prefix='/customer',
-    tags=['customer']
+    tags=['customer'],
 )
 
 mailing_router = APIRouter(
     prefix='/mailing',
-    tags=['mailing']
+    tags=['mailing'],
 )
 
 message_router = APIRouter(
     prefix='/message',
-    tags=['message']
+    tags=['message'],
 )
 
 statistics_router = APIRouter(
     prefix='/mailing/statistics',
-    tags=['statistics']
+    tags=['statistics'],
 )
 
 
@@ -71,10 +72,12 @@ async def create_customer(
 
 
 @customer_router.get('/list', response_model=ShowCustomers)
+@cache(expire=settings.EXPIRY_TIME_SEC)
 async def get_customers(
+        paginator: Paginator = Depends(Paginator),
         session: AsyncSession = Depends(get_session_generator)
 ) -> ShowCustomers:
-    return await get_customers_controller(session=session)
+    return await get_customers_controller(session=session, paginator=paginator)
 
 
 @customer_router.put('/edit', response_model=ShowCustomer)
@@ -110,6 +113,7 @@ async def edit_mailing(
 
 
 @mailing_router.delete('/delete', response_model=ShowMailing)
+@cache(expire=settings.EXPIRY_TIME_SEC)
 async def delete_mailing(
         mailing_id: uuid.UUID,
         session: AsyncSession = Depends(get_session_generator)
@@ -153,6 +157,7 @@ async def create_message(
 @message_router.get('/list', response_model=ShowMessages)
 @cache(expire=settings.EXPIRY_TIME_SEC)
 async def get_messages(
+        paginator: Paginator = Depends(Paginator),
         session: AsyncSession = Depends(get_session_generator)
 ) -> ShowMessages:
-    return await get_messages_controller(session=session)
+    return await get_messages_controller(session=session, paginator=paginator)

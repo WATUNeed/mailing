@@ -152,12 +152,27 @@ class MailingDAL(BaseDAL):
 
     @services_request
     @catch_exceptions
-    async def get_actual_mailings(self, date: datetime = get_current_date()) -> ScalarResult[Mailing]:
-        result = await self.db_session.execute(
-            select(Mailing)
-            .where(Mailing.start_date > date)
-            .order_by(Mailing.start_date)
-        )
+    async def get_actual_mailings(
+            self,
+            date: datetime = get_current_date(),
+            limit: int = 10,
+            offset: int = 0,
+            pagination: bool = True
+    ) -> ScalarResult[Mailing]:
+        if pagination:
+            result = await self.db_session.execute(
+                select(Mailing)
+                .where(Mailing.start_date > date)
+                .order_by(Mailing.start_date)
+                .limit(limit)
+                .offset(offset)
+            )
+        else:
+            result = await self.db_session.execute(
+                select(Mailing)
+                .where(Mailing.start_date > date)
+                .order_by(Mailing.start_date)
+            )
         mailings = result.scalars()
         return mailings
 
@@ -172,7 +187,7 @@ class MailingDAL(BaseDAL):
         from services.message import MessageDAL
 
         queue_date = get_current_date()
-        mailings = await self.get_actual_mailings(queue_date)
+        mailings = await self.get_actual_mailings(date=queue_date, pagination=False)
 
         async for mailing in async_generator(mailings):
             is_expiry_queue = await MailingDAL._wait_and_check_on_expiry_queue(mailing.start_date, queue_date)
@@ -218,7 +233,7 @@ class MailingDAL(BaseDAL):
 
     @services_request
     @catch_exceptions
-    async def get_statistics_mailings(self):
+    async def get_statistics_mailings(self) -> ShowStatisticsMailings:
         """
         Outputs statistics on all mailings.
         :return:

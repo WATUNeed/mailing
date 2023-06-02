@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.dependencies import Paginator
 from models.db import MessageStates
 from models.schemas.customer import CustomerCreate, ShowCustomer, ShowCustomers, CustomerEdit
 from models.schemas.mailing import (
@@ -31,14 +32,17 @@ async def create_customer_controller(body: CustomerCreate, session: AsyncSession
     return ShowCustomer(**customer.__dict__)
 
 
-async def get_customers_controller(session: AsyncSession) -> ShowCustomers:
+async def get_customers_controller(session: AsyncSession, paginator: Paginator) -> ShowCustomers:
     """
     Outputs a list of customers from the database.
+    :param paginator:
+    :param offset:
+    :param limit:
     :param session:
     :return:
     """
     customer_dal = CustomerDAL(session)
-    customers = await customer_dal.get_customers()
+    customers = await customer_dal.get_customers(**paginator._asdict())
     return ShowCustomers(customers=[ShowCustomer(**customer.__dict__) for customer in customers])
 
 
@@ -138,14 +142,15 @@ async def get_statistics_mailings_controller(session: AsyncSession) -> ShowStati
     return await mailing_dal.get_statistics_mailings()
 
 
-async def get_messages_controller(session: AsyncSession) -> ShowMessages:
+async def get_messages_controller(session: AsyncSession, paginator: Paginator) -> ShowMessages:
     """
     Outputs a list of all messages from the database.
+    :param paginator:
     :param session:
     :return:
     """
     message_dal = MessageDAL(session)
-    messages = await message_dal.get_messages()
+    messages = await message_dal.get_messages(**paginator._asdict())
     return ShowMessages(messages=[ShowMessage(**message.__dict__) for message in messages])
 
 
