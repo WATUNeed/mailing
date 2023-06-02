@@ -28,7 +28,9 @@ from models.schemas.mailing import (
     ShowMailing,
     MailingCreate,
     MailingEdit,
-    ShowMailingAPIResponse, ShowStatisticsByMailing, ShowStatisticsMailings,
+    ShowMailingAPIResponse,
+    ShowStatisticsByMailing,
+    ShowStatisticsMailings,
 )
 from models.schemas.message import (
     ShowMessages,

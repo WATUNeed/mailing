@@ -16,6 +16,7 @@ from fastapi import FastAPI
 
 from utils.logger_config import configurate_logging_file
 
+
 app = FastAPI(**settings.get_backend_app_attributes)
 app.add_middleware(CORSMiddleware, **settings.get_middleware_attributes)
 
@@ -27,10 +28,8 @@ async def app_startup():
     :return:
     """
 
-    # logging file setup
     # Configure logging
     configurate_logging_file()
-    # logging.basicConfig(**settings.get_file_logging_attributes)
 
     # Configuration router
     main_router = APIRouter()
@@ -40,6 +39,7 @@ async def app_startup():
     main_router.include_router(statistics_router)
     app.include_router(main_router)
 
+    # create mailing queue
     await MailingDAL(create_db_session()).run_mailing_queue()
 
     # Configuration redis

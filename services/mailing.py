@@ -273,23 +273,20 @@ class MailingDAL(BaseDAL):
         settings.LATEST_QUEUE_DATE = current_queue_date
         is_expiry_queue = False
 
-        while True:
+        while not is_expiry_queue:
             current_date = get_current_date()
 
             if settings.LATEST_QUEUE_DATE != current_queue_date:
-                # A newer version of the queue has appeared.
                 is_expiry_queue = True
-                return is_expiry_queue
+                continue
 
             if start_mailing_date < current_date:
                 time_gap = (start_mailing_date - current_date).total_seconds()
+
                 if time_gap > settings.WAITING_TIME:
                     await asyncio.sleep(settings.WAITING_TIME)
                 else:
                     await asyncio.sleep(time_gap)
-            else:
-                # The mailing start date has arrived.
-                return is_expiry_queue
 
     @staticmethod
     async def _split_messages_by_states(mailing: Mailing) -> MessagesListsByStates:
