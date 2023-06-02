@@ -64,11 +64,19 @@ class Settings(pydantic.BaseSettings):
         'Authorization': f'Bearer {os.getenv("AUTH_TOKEN")}',
         'Content-Type': 'application/json',
     })
+
+    # Mailing queue
     MAILING_OFFSET_MIN: int = Field(default=5)
     TIMEOUT: int = Field(default=20)
     LATEST_QUEUE_DATE: datetime = Field(default=get_current_date())
-    WAITING_TIME: int = 5
-    EXPIRY_TIME_SEC: int = 60
+    WAITING_TIME: int = Field(default=5)
+
+    # Cache
+    EXPIRY_TIME_SEC: int = Field(default=60)
+
+    # Pagination depends
+    PAGINATION_LOW_LIMIT: int = Field(default=1)
+    PAGINATION_HIGH_LIMIT: int = Field(default=10)
 
     @property
     def get_backend_app_attributes(self) -> dict[str, str | bool | None]:
