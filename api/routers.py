@@ -18,7 +18,7 @@ from api.controllers import (
     get_statistics_mailings_controller,
     delete_mailing_controller
 )
-from api.dependencies import Paginator, get_paginator_params
+from api.dependencies import PaginationParameters
 from models.schemas.customer import (
     ShowCustomer,
     CustomerCreate,
@@ -74,7 +74,7 @@ async def create_customer(
 @customer_router.get('/list', response_model=ShowCustomers)
 @cache(expire=settings.EXPIRY_TIME_SEC)
 async def get_customers(
-        paginator: Paginator = Depends(Paginator),
+        paginator: PaginationParameters = Depends(PaginationParameters),
         session: AsyncSession = Depends(get_session_generator)
 ) -> ShowCustomers:
     return await get_customers_controller(session=session, paginator=paginator)
@@ -157,7 +157,7 @@ async def create_message(
 @message_router.get('/list', response_model=ShowMessages)
 @cache(expire=settings.EXPIRY_TIME_SEC)
 async def get_messages(
-        paginator: Paginator = Depends(Paginator),
+        paginator: PaginationParameters = Depends(PaginationParameters),
         session: AsyncSession = Depends(get_session_generator)
 ) -> ShowMessages:
     return await get_messages_controller(session=session, paginator=paginator)
