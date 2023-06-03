@@ -58,7 +58,7 @@ class Settings(pydantic.BaseSettings):
     ALLOW_CREDENTIALS: bool = Field(default=True)
 
     # External mailing API settings.
-    MAILING_API_URL: str = Field(default='https://probe.fbrq.cloud/v1/send/1')
+    MAILING_API_URL: str = Field(default='https://probe.fbrq.cloud/v1/send/')
     MAILING_API_HEADERS: dict = Field(default={
         'accept': 'application/json',
         'Authorization': f'Bearer {os.getenv("AUTH_TOKEN")}',

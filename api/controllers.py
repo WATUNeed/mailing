@@ -36,8 +36,6 @@ async def get_customers_controller(session: AsyncSession, paginator: PaginationP
     """
     Outputs a list of customers from the database.
     :param paginator:
-    :param offset:
-    :param limit:
     :param session:
     :return:
     """

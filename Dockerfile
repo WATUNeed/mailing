@@ -19,6 +19,9 @@ RUN . /opt/venv/bin/activate && pip install --upgrade pip && pip install -r requ
 COPY . .
 
 # add entry point command
-RUN chmod +x ./docker-entrypoint.sh
 
-ENTRYPOINT ["/bin/bash", "-c", "./docker-entrypoint.sh"]
+RUN chmod a+x docker/*.sh
+
+# RUN chmod +x ./docker-entrypoint.sh
+
+# ENTRYPOINT ["/bin/bash", "-c", "./docker-entrypoint.sh"]

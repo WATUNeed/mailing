@@ -39,9 +39,6 @@ async def app_startup():
     main_router.include_router(statistics_router)
     app.include_router(main_router)
 
-    # create mailing queue
-    await MailingDAL(create_db_session()).run_mailing_queue()
-
     # Configuration redis
     redis_conn = aioredis.from_url(**settings.get_redis_attributes)
     FastAPICache.init(RedisBackend(redis_conn), prefix='fastapi-cache')

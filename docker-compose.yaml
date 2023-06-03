@@ -25,8 +25,8 @@ services:
 
   api:
     container_name: api
-    build: .
-    entrypoint: ./docker-entrypoint.sh
+    build:
+      context: .
     ports:
       - "8080:8000"
     env_file:
@@ -37,6 +37,18 @@ services:
     volumes:
       - api:/app/repository/migration/versions
       - ./logs:/app/logs
+    command: ["/app/docker/app_entrypoint.sh"]
+
+  celery:
+    container_name: celery
+    build:
+      context: .
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    command: ["/app/docker/celery_entrypoint.sh"]
 
 volumes:
   db:

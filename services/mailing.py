@@ -1,13 +1,12 @@
-import asyncio
 import logging
 from dataclasses import dataclass, asdict
 from datetime import datetime
 import uuid
-from typing import Any, NamedTuple
+from typing import NamedTuple
 import pandas as pd
 
 from fastapi import HTTPException
-from sqlalchemy import select, delete, ScalarResult
+from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 
 from models.schemas.mailing import ShowStatisticsByMailing, ShowStatisticsMailings
@@ -19,6 +18,7 @@ from settings import settings
 from utils.async_utils import async_generator
 from utils.decorators import catch_exceptions, services_request
 from utils.time_utils import get_current_date
+from tasks.tasks import run_mailing
 
 
 class MailingDAL(BaseDAL):
@@ -34,23 +34,8 @@ class MailingDAL(BaseDAL):
         total_undelivered_messages: int
         mailings: list[ShowStatisticsByMailing]
 
-    @staticmethod
-    def update_queue(func: Any) -> Any:
-        """
-        The decorator updates the mailing queue.
-        :param func:
-        :return:
-        """
-        async def wrapped(self, *args, **kwargs) -> Any:
-            result = await func(self, *args, **kwargs)
-            asyncio.create_task(MailingDAL(create_db_session()).run_mailing_queue())
-            return result
-
-        return wrapped
-
     @catch_exceptions
     @services_request
-    @update_queue
     async def create_mailing(self, start_date: datetime, message: str, filters: int, expiry_date: datetime) -> Mailing:
         """
         Creates a mailing list in a database.
@@ -63,11 +48,11 @@ class MailingDAL(BaseDAL):
         new_mailing = Mailing(start_date=start_date, message=message, filters=filters, expiry_date=expiry_date)
         self.db_session.add(new_mailing)
         await self.db_session.commit()
+        run_mailing.apply_async(args=(new_mailing.id,), eta=get_current_date())
         return new_mailing
 
     @services_request
     @catch_exceptions
-    @update_queue
     async def edit_mailing(
             self,
             id: uuid.UUID,
@@ -96,7 +81,6 @@ class MailingDAL(BaseDAL):
 
     @services_request
     @catch_exceptions
-    @update_queue
     async def delete_mailing(self, id: uuid.UUID) -> Mailing:
         """
         Delete a mailing list in a database.
@@ -131,7 +115,6 @@ class MailingDAL(BaseDAL):
 
     @services_request
     @catch_exceptions
-    @update_queue
     async def send_mailing(self, id: uuid.UUID) -> ResponseCode:
         """
         Starts mailing by id.
@@ -149,53 +132,6 @@ class MailingDAL(BaseDAL):
             expiry_date=get_current_date() + pd.DateOffset(minutes=settings.MAILING_OFFSET_MIN)
         )
         return await MessageDAL.send_messages(id)
-
-    @services_request
-    @catch_exceptions
-    async def get_actual_mailings(
-            self,
-            date: datetime = get_current_date(),
-            limit: int = 10,
-            offset: int = 0,
-            pagination: bool = True
-    ) -> ScalarResult[Mailing]:
-        if pagination:
-            result = await self.db_session.execute(
-                select(Mailing)
-                .where(Mailing.start_date > date)
-                .order_by(Mailing.start_date)
-                .limit(limit)
-                .offset(offset)
-            )
-        else:
-            result = await self.db_session.execute(
-                select(Mailing)
-                .where(Mailing.start_date > date)
-                .order_by(Mailing.start_date)
-            )
-        mailings = result.scalars()
-        return mailings
-
-    @services_request
-    @catch_exceptions
-    async def run_mailing_queue(self):
-        """
-        Retrieves a list of current mailings from the database and creates a queue in order of when the mailing starts.
-        Wait for the closest mailing to start and start the mailing. Torts the queue if a newer queue has appeared.
-        :return:
-        """
-        from services.message import MessageDAL
-
-        queue_date = get_current_date()
-        mailings = await self.get_actual_mailings(date=queue_date, pagination=False)
-
-        async for mailing in async_generator(mailings):
-            is_expiry_queue = await MailingDAL._wait_and_check_on_expiry_queue(mailing.start_date, queue_date)
-
-            if is_expiry_queue:
-                return
-
-            await MessageDAL.send_messages(mailing_id=mailing.id)
 
     @services_request
     @catch_exceptions
@@ -273,35 +209,6 @@ class MailingDAL(BaseDAL):
             result.total_undelivered_messages += statistics.undelivered_count
             result.mailings.append(ShowStatisticsByMailing(**statistics.__dict__))
         return result
-
-    @staticmethod
-    async def _wait_and_check_on_expiry_queue(
-            start_mailing_date: datetime,
-            current_queue_date: datetime
-    ) -> bool:
-        """
-        Waiting for the mailing to start and checking the queue for relevance.
-        :param start_mailing_date:
-        :param current_queue_date:
-        :return: returns true if a newer queue has appeared.
-        """
-        settings.LATEST_QUEUE_DATE = current_queue_date
-        is_expiry_queue = False
-
-        while not is_expiry_queue:
-            current_date = get_current_date()
-
-            if settings.LATEST_QUEUE_DATE != current_queue_date:
-                is_expiry_queue = True
-                continue
-
-            if start_mailing_date < current_date:
-                time_gap = (start_mailing_date - current_date).total_seconds()
-
-                if time_gap > settings.WAITING_TIME:
-                    await asyncio.sleep(settings.WAITING_TIME)
-                else:
-                    await asyncio.sleep(time_gap)
 
     @staticmethod
     async def _split_messages_by_states(mailing: Mailing) -> MessagesListsByStates:

@@ -99,7 +99,7 @@ async def delete_customer(
 @mailing_router.post('/create', response_model=ShowMailing)
 async def create_mailing(
         body: MailingCreate,
-        session: AsyncSession = Depends(get_session_generator)
+        session: AsyncSession = Depends(get_session_generator),
 ) -> ShowMailing:
     return await create_mailing_controller(body, session=session)
 

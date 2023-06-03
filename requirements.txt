@@ -9,3 +9,4 @@ asyncpg
 aiohttp
 pandas
 redis
+celery

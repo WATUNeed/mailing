@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import logging
 import uuid
@@ -73,12 +74,13 @@ class MessageDAL(BaseDAL):
         :param phone:
         :return:
         """
+        headers = f'{settings.MAILING_API_HEADERS}{id}'
         data = {
             "id": id,
             "phone": phone,
             "text": message
         }
-        async with aiohttp.ClientSession(headers=settings.MAILING_API_HEADERS, timeout=settings.TIMEOUT) as session:
+        async with aiohttp.ClientSession(headers=headers, timeout=settings.TIMEOUT) as session:
             async with session.post(url=settings.MAILING_API_URL, data=data) as resp:
                 return resp.status, await resp.text()
 
