@@ -14,4 +14,9 @@ celery = Celery('tasks', broker=settings.get_redis_attributes.get('url'))
 
 @celery.task
 def run_mailing(mailing_id: uuid.UUID) -> ResponseCode:
+    """
+    Creates a celery task to start the mailing list.
+    :param mailing_id:
+    :return:
+    """
     return asyncio.run(MessageDAL(get_session_generator()).send_messages(mailing_id))

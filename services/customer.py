@@ -67,6 +67,11 @@ class CustomerDAL(BaseDAL):
     @services_request
     @catch_exceptions
     async def get_customer(self, id: uuid.UUID) -> Customer:
+        """
+        Output the customer by id.
+        :param id:
+        :return:
+        """
         result = await self.db_session.execute(select(Customer).where(Customer.id == id).limit(1))
         customer = result.scalars().one()
         return customer

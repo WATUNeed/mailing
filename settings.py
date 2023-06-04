@@ -39,10 +39,10 @@ class Settings(pydantic.BaseSettings):
     # File logging.
     FILE_LOGGING_LEVEL: int = Field(logging.ERROR)
     FILE_MAX_BYTES: int = Field(default=10 * 1024 * 1024)  # 10MB
-    FILET_BACKUP_COUNT: int = Field(default=5)
+    FILE_BACKUP_COUNT: int = Field(default=5)
     FILE_LOGGING_FILENAME: str = Field("logs/error_log")
-    FILE_LOGGING_FORMAT: str = Field("%(asctime)s [%(levelname)s]: %(message)s")
-    FILE_LOGGING_DATEFMT: str = Field("%Y-%m-%d %H:%M:%S")
+    LOGGING_FORMAT: str = Field("%(levelname)s: [%(asctime)s] - %(message)s")
+    LOGGING_DATEFMT: str = Field("%Y-%m-%d %H:%M:%S")
     FILE_LOGGING_MODE: str = Field('a+')
 
     # Middleware
@@ -89,11 +89,13 @@ class Settings(pydantic.BaseSettings):
 
     @property
     def get_uvicorn_attributes(self) -> dict[str, str | bool | None]:
+        from utils.logger_config import configurate_logging_uvicorn_console
         return {
             'host': self.WEB_HOST,
             'port': self.WEB_PORT,
             'reload': self.RELOAD,
-            'log_level': self.LOGGING_LEVEL
+            'log_level': self.LOGGING_LEVEL,
+            'log_config': configurate_logging_uvicorn_console()
         }
 
     @property
@@ -122,15 +124,15 @@ class Settings(pydantic.BaseSettings):
         return {
             'filename': self.FILE_LOGGING_FILENAME,
             'maxBytes': self.FILE_MAX_BYTES,
-            'backupCount': self.FILET_BACKUP_COUNT,
+            'backupCount': self.FILE_BACKUP_COUNT,
             'mode': self.FILE_LOGGING_MODE
         }
 
     @property
     def get_file_logging_formatter_attributes(self) -> dict[str, str]:
         return {
-            'fmt': self.FILE_LOGGING_FORMAT,
-            'datefmt': self.FILE_LOGGING_DATEFMT
+            'fmt': self.LOGGING_FORMAT,
+            'datefmt': self.LOGGING_DATEFMT
         }
 
 

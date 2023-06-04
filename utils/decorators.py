@@ -21,6 +21,11 @@ def catch_exceptions(func: Any) -> Any:
 
 
 def services_request(func: Any) -> Any:
+    """
+    Creates an asynchronous context manager for accessing the database.
+    :param func:
+    :return:
+    """
     async def wrapped(self, *args, **kwargs) -> Any:
         async with self.db_session as session:
             self.db_session = session

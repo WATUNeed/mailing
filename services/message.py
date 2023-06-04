@@ -101,11 +101,15 @@ class MessageDAL(BaseDAL):
 
         mailing = await MailingDAL(create_db_session()).get_mailing_by_id(mailing_id)
 
+        if mailing.start_date > get_current_date():
+            return ResponseCode(code=410, message='The task is overwritten.')
+
         customers = await CustomerDAL(create_db_session()).get_customers_by_filter(filters=mailing.filters)
         with_errors = await MessageDAL._start_mailing(customers, mailing)
 
         if with_errors:
-            return ResponseCode(code=200, message='Mailing completed successfully, but with errors')
+            return ResponseCode(code=200, message='Mailing completed successfully, but with errors.')
+
         return ResponseCode(code=200, message='Mailing successfully completed')
 
     @staticmethod
