@@ -48,7 +48,7 @@ class MailingDAL(BaseDAL):
         new_mailing = Mailing(start_date=start_date, message=message, filters=filters, expiry_date=expiry_date)
         self.db_session.add(new_mailing)
         await self.db_session.commit()
-        run_mailing.apply_async(args=(new_mailing.id,), eta=get_current_date())
+        run_mailing.apply_async(args=(new_mailing.id,), eta=start_date)
         return new_mailing
 
     @services_request
@@ -77,6 +77,7 @@ class MailingDAL(BaseDAL):
         mailing.filters = filters
         mailing.expiry_date = expiry_date
         await self.db_session.commit()
+        run_mailing.apply_async(args=(id,), eta=start_date)
         return mailing
 
     @services_request
@@ -141,7 +142,6 @@ class MailingDAL(BaseDAL):
         :param mailing_id:
         :return:
         """
-        logging.info(f'Mailing {mailing_id} statistics have been requested.')
         current_datetime = get_current_date()
 
         query = select(Mailing).options(selectinload(Mailing.messages)).where(Mailing.id == mailing_id)

@@ -8,8 +8,6 @@ from redis import asyncio as aioredis
 from starlette.middleware.cors import CORSMiddleware
 
 from api.routers import customer_router, mailing_router, message_router, statistics_router
-from repository.session import create_db_session
-from services.mailing import MailingDAL
 from settings import settings
 
 from fastapi import FastAPI

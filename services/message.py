@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import logging
 import uuid
@@ -15,6 +14,9 @@ from models.db import Message, MessageStates, Customer, Mailing
 from utils.async_utils import async_enumerate
 from utils.decorators import catch_exceptions, services_request
 from utils.time_utils import get_current_date
+
+
+logger = logging.getLogger("uvicorn")
 
 
 class MessageDAL(BaseDAL):
@@ -74,14 +76,15 @@ class MessageDAL(BaseDAL):
         :param phone:
         :return:
         """
-        headers = f'{settings.MAILING_API_HEADERS}{id}'
+        url = f'{settings.MAILING_API_URL}{id}'
         data = {
             "id": id,
             "phone": phone,
             "text": message
         }
-        async with aiohttp.ClientSession(headers=headers, timeout=settings.TIMEOUT) as session:
-            async with session.post(url=settings.MAILING_API_URL, data=data) as resp:
+        session_timeout = aiohttp.ClientTimeout(total=None, sock_connect=settings.TIMEOUT, sock_read=settings.TIMEOUT)
+        async with aiohttp.ClientSession(timeout=session_timeout) as session:
+            async with session.post(url=url, data=data) as resp:
                 return resp.status, await resp.text()
 
     @staticmethod
@@ -115,7 +118,6 @@ class MessageDAL(BaseDAL):
         :param mailing:
         :return:
         """
-        logging.info(f'The mailing list {mailing.id} has been started.')
         with_errors = False
         async for id, customer in async_enumerate(customers):
             message_dal = MessageDAL(create_db_session())
@@ -126,23 +128,24 @@ class MessageDAL(BaseDAL):
                 await MessageDAL.send_message(
                     id=id,
                     phone=customer.phone,
-                    message=mailing.message
+                    message=mailing.message,
                 )
                 await message_dal.create_message(
                     sending_date=get_current_date(),
                     status=MessageStates.DELIVERED,
                     mailing_id=mailing.id,
-                    customer_id=customer.id
+                    customer_id=customer.id,
                 )
-            except Exception:
+            except Exception as e:
                 await message_dal.create_message(
                     sending_date=get_current_date(),
                     status=MessageStates.UNDELIVERED,
                     mailing_id=mailing.id,
-                    customer_id=customer.id
+                    customer_id=customer.id,
                 )
                 with_errors = True
+                logger.error(e)
             finally:
-                await message_dal.db_session.close()
-        logging.info(f'The mailing list {mailing.id} has been completed.')
+                logger.debug(f'Customer {customer.id} received message.')
+        logger.info(f'Mailing {mailing.id} is completed.')
         return with_errors
