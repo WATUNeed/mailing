@@ -14,6 +14,7 @@ _с использованием внешнего API сервиса_
 * sqlalchemy[asyncio]
 * asyncpg
 * aiohttp
+* celery
 
 ---
 
