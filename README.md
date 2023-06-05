@@ -8,13 +8,13 @@ _с использованием внешнего API сервиса_
 
 * fastapi
 * uvicorn
+* celery
+* redis
 * pydantic
 * sqlalchemy
 * alembic
-* sqlalchemy[asyncio]
 * asyncpg
 * aiohttp
-* celery
 
 ---
 
