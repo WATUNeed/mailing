@@ -100,7 +100,7 @@ async def delete_mailing_controller(mailing_id: uuid.UUID, session: AsyncSession
     :return:
     """
     mailing_dal = MailingDAL(session)
-    mailing = await mailing_dal.delete_mailing(mailing_id)
+    mailing = await mailing_dal.delete_mailing(mailing_id=mailing_id)
     return ShowMailing(**mailing.__dict__)
 
 

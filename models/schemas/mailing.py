@@ -29,9 +29,9 @@ class _MailingWithoutId(BaseModel):
 
 
 class _MailingFull(_MailingWithoutId):
-    id: uuid.UUID
+    mailing_id: uuid.UUID
 
-    @validator('id')
+    @validator('mailing_id')
     def validate_id(cls, value):
         return validate_id(value)
 

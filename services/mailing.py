@@ -1,4 +1,3 @@
-import logging
 from dataclasses import dataclass, asdict
 from datetime import datetime
 import uuid
@@ -48,14 +47,14 @@ class MailingDAL(BaseDAL):
         new_mailing = Mailing(start_date=start_date, message=message, filters=filters, expiry_date=expiry_date)
         self.db_session.add(new_mailing)
         await self.db_session.commit()
-        run_mailing.apply_async(args=(new_mailing.id,), eta=start_date)
+        run_mailing.apply_async(args=(new_mailing.mailing_id,), eta=start_date)
         return new_mailing
 
     @services_request
     @catch_exceptions
     async def edit_mailing(
             self,
-            id: uuid.UUID,
+            mailing_id: uuid.UUID,
             start_date: datetime,
             message: str,
             filters: int,
@@ -63,50 +62,53 @@ class MailingDAL(BaseDAL):
     ) -> Mailing:
         """
         Edit a mailing list in a database.
-        :param id:
+        :param mailing_id:
         :param start_date:
         :param message:
         :param filters:
         :param expiry_date:
         :return:
         """
-        result = await self.db_session.execute(select(Mailing).where(Mailing.id == id))
+        result = await self.db_session.execute(select(Mailing).where(Mailing.mailing_id == mailing_id))
         mailing: Mailing = result.scalars().one()
         mailing.start_date = start_date
         mailing.message = message
         mailing.filters = filters
         mailing.expiry_date = expiry_date
         await self.db_session.commit()
-        run_mailing.apply_async(args=(id,), eta=start_date)
+        run_mailing.apply_async(args=(mailing_id,), eta=start_date)
+        return mailing
+
+    async def check_mailing_for_existence(self, mailing_id: uuid.UUID) -> bool | Mailing:
+        mailing = await self.db_session.execute(select(Mailing).where(Mailing.mailing_id == mailing_id).limit(1))
+        mailing = mailing.scalars().one()
+
+        if not mailing:
+            return False
         return mailing
 
     @services_request
     @catch_exceptions
-    async def delete_mailing(self, id: uuid.UUID) -> Mailing:
+    async def delete_mailing(self, mailing_id: uuid.UUID) -> Mailing:
         """
         Delete a mailing list in a database.
-        :param id:
+        :param mailing_id:
         :return:
         """
-        mailing = await self.db_session.execute(select(Mailing).where(Mailing.id == id).limit(1))
-        mailing = mailing.scalars().one()
-
-        if not mailing:
-            return HTTPException(status_code=404, detail='Mailing is not found')
-
-        await self.db_session.execute(delete(Mailing).where(Mailing.id == id))
+        mailing = await MailingDAL(create_db_session()).check_mailing_for_existence(mailing_id=mailing_id)
+        await self.db_session.execute(delete(Mailing).where(Mailing.mailing_id == mailing_id))
         await self.db_session.commit()
         return mailing
 
     @services_request
     @catch_exceptions
-    async def get_mailing_by_id(self, id: uuid.UUID) -> Mailing:
+    async def get_mailing_by_id(self, mailing_id: uuid.UUID) -> Mailing:
         """
-        Outputs mailing by its id.
-        :param id:
+        Outputs mailing by its customer_id.
+        :param mailing_id:
         :return:
         """
-        mailing = await self.db_session.execute(select(Mailing).where(Mailing.id == id).limit(1))
+        mailing = await self.db_session.execute(select(Mailing).where(Mailing.mailing_id == mailing_id).limit(1))
         mailing = mailing.scalars().one()
 
         if not mailing:
@@ -116,37 +118,40 @@ class MailingDAL(BaseDAL):
 
     @services_request
     @catch_exceptions
-    async def send_mailing(self, id: uuid.UUID) -> ResponseCode:
+    async def send_mailing(self, mailing_id: uuid.UUID) -> ResponseCode:
         """
-        Starts mailing by id.
-        :param id:
+        Starts mailing by customer_id.
+        :param mailing_id:
         :return:
         """
         from services.message import MessageDAL
 
-        mailing = await self.get_mailing_by_id(id)
+        mailing = await self.get_mailing_by_id(mailing_id)
         await MailingDAL(create_db_session()).edit_mailing(
-            id=mailing.id,
+            id=mailing.mailing_id,
             start_date=get_current_date(),
             message=mailing.message,
             filters=mailing.filters,
             expiry_date=get_current_date() + pd.DateOffset(minutes=settings.MAILING_OFFSET_MIN)
         )
-        return await MessageDAL.send_messages(id)
+        return await MessageDAL.send_messages(mailing_id)
 
     @services_request
     @catch_exceptions
     async def get_statistics_by_mailing(self, mailing_id: uuid.UUID) -> ShowStatisticsByMailing:
         """
-        Outputs statistics on the mailing list id.
+        Outputs statistics on the mailing list customer_id.
         :param mailing_id:
         :return:
         """
         current_datetime = get_current_date()
 
-        query = select(Mailing).options(selectinload(Mailing.messages)).where(Mailing.id == mailing_id)
+        query = select(Mailing).options(selectinload(Mailing.messages)).where(Mailing.mailing_id == mailing_id)
         result = await self.db_session.execute(query)
         mailing = result.scalar()
+
+        if not mailing:
+            raise HTTPException(status_code=404, detail='Mailing is not found')
 
         if mailing.expiry_date > current_datetime:
             return ShowStatisticsByMailing(
@@ -198,7 +203,7 @@ class MailingDAL(BaseDAL):
         )
 
         async for mailing in async_generator(mailings):
-            statistics = await MailingDAL(create_db_session()).get_statistics_by_mailing(mailing.id)
+            statistics = await MailingDAL(create_db_session()).get_statistics_by_mailing(mailing.customer_id)
 
             if mailing.expiry_date < current_datetime:
                 result.completed_mailings_count += 1

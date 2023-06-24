@@ -78,7 +78,7 @@ class MessageDAL(BaseDAL):
         """
         url = f'{settings.MAILING_API_URL}{id}'
         data = {
-            "id": id,
+            "customer_id": id,
             "phone": phone,
             "text": message
         }
@@ -91,7 +91,7 @@ class MessageDAL(BaseDAL):
     @catch_exceptions
     async def send_messages(mailing_id: uuid.UUID) -> ResponseCode:
         """
-        Retrieves the mailing from the database by id. Gets a list of customers that match the filters from the
+        Retrieves the mailing from the database by customer_id. Gets a list of customers that match the filters from the
         database.
         :param mailing_id:
         :return:
@@ -137,19 +137,19 @@ class MessageDAL(BaseDAL):
                 await message_dal.create_message(
                     sending_date=get_current_date(),
                     status=MessageStates.DELIVERED,
-                    mailing_id=mailing.id,
-                    customer_id=customer.id,
+                    mailing_id=mailing.mailing_id,
+                    customer_id=customer.customer_id,
                 )
             except Exception as e:
                 await message_dal.create_message(
                     sending_date=get_current_date(),
                     status=MessageStates.UNDELIVERED,
-                    mailing_id=mailing.id,
-                    customer_id=customer.id,
+                    mailing_id=mailing.mailing_id,
+                    customer_id=customer.customer_id,
                 )
                 with_errors = True
                 logger.error(e)
             finally:
-                logger.debug(f'Customer {customer.id} received message.')
-        logger.info(f'Mailing {mailing.id} is completed.')
+                logger.debug(f'Customer {customer.customer_id} received message.')
+        logger.info(f'Mailing {mailing.mailing_id} is completed.')
         return with_errors

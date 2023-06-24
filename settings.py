@@ -52,9 +52,8 @@ class Settings(pydantic.BaseSettings):
             f'http://{WEB_HOST}:{WEB_PORT}',
         ]
     )
-    ALLOW_METHODS: list[str] = Field(default=['GET', 'POST', 'PUT', 'DELETE'])
-    ALLOW_HEADERS: list[str] = Field(default=['Content-Type', 'Set-Cookie', 'Access-Control-Allow-Headers',
-                                              'Access-Control-Allow-Origin', 'Authorization'])
+    ALLOW_METHODS: list[str] = Field(default=["*"])
+    ALLOW_HEADERS: list[str] = Field(default=["*"])
     ALLOW_CREDENTIALS: bool = Field(default=True)
 
     # External mailing API settings.

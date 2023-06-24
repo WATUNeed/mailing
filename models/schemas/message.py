@@ -33,9 +33,9 @@ class _MessageWithoutId(BaseModel):
 
 
 class _MessageFull(_MessageWithoutId):
-    id: uuid.UUID
+    message_id: uuid.UUID
 
-    @validator('id')
+    @validator('message_id')
     def validate_id(cls, value):
         return validate_id(value)
 

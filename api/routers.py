@@ -113,7 +113,6 @@ async def edit_mailing(
 
 
 @mailing_router.delete('/delete', response_model=ShowMailing)
-@cache(expire=settings.EXPIRY_TIME_SEC)
 async def delete_mailing(
         mailing_id: uuid.UUID,
         session: AsyncSession = Depends(get_session_generator)

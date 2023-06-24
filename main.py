@@ -1,7 +1,7 @@
 import logging
 
 import uvicorn
-from fastapi import APIRouter
+from fastapi import FastAPI, APIRouter
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from redis import asyncio as aioredis
@@ -9,9 +9,6 @@ from starlette.middleware.cors import CORSMiddleware
 
 from api.routers import customer_router, mailing_router, message_router, statistics_router
 from settings import settings
-
-from fastapi import FastAPI
-
 from utils.logger_config import configurate_logging_file
 
 
@@ -40,8 +37,6 @@ async def app_startup():
     # Configuration redis
     redis_conn = aioredis.from_url(**settings.get_redis_attributes)
     FastAPICache.init(RedisBackend(redis_conn), prefix='fastapi-cache')
-
-    logging.info('Application startup complete.')
 
 
 if __name__ == "__main__":

@@ -22,9 +22,9 @@ class _CustomerWithoutId(BaseModel):
 
 
 class _CustomerFull(_CustomerWithoutId):
-    id: uuid.UUID
+    customer_id: uuid.UUID
 
-    @validator('id')
+    @validator('customer_id')
     def validate_id(cls, value):
         return validate_id(value)
 

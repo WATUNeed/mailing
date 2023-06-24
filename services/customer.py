@@ -47,16 +47,16 @@ class CustomerDAL(BaseDAL):
 
     @services_request
     @catch_exceptions
-    async def edit_customer(self, id: uuid.UUID, phone: int, code: int, time_zone: str) -> Customer:
+    async def edit_customer(self, customer_id: uuid.UUID, phone: int, code: int, time_zone: str) -> Customer:
         """
         Edit customer in database.
-        :param id:
+        :param customer_id:
         :param phone:
         :param code:
         :param time_zone:
         :return:
         """
-        result = await self.db_session.execute(select(Customer).where(Customer.id == id))
+        result = await self.db_session.execute(select(Customer).where(Customer.customer_id == customer_id))
         customer: Customer = result.scalars().one()
         customer.phone_number = phone
         customer.mobile_code = code
@@ -66,31 +66,31 @@ class CustomerDAL(BaseDAL):
 
     @services_request
     @catch_exceptions
-    async def get_customer(self, id: uuid.UUID) -> Customer:
+    async def get_customer(self, customer_id: uuid.UUID) -> Customer:
         """
-        Output the customer by id.
-        :param id:
+        Output the customer by customer_id.
+        :param customer_id:
         :return:
         """
-        result = await self.db_session.execute(select(Customer).where(Customer.id == id).limit(1))
+        result = await self.db_session.execute(select(Customer).where(Customer.customer_id == customer_id).limit(1))
         customer = result.scalars().one()
         return customer
 
     @services_request
     @catch_exceptions
-    async def delete_customer(self, id: uuid.UUID) -> Customer:
+    async def delete_customer(self, customer_id: uuid.UUID) -> Customer:
         """
         Delete customer from database.
-        :param id:
+        :param customer_id:
         :return:
         """
 
-        customer = await CustomerDAL(create_db_session()).get_customer(id)
+        customer = await CustomerDAL(create_db_session()).get_customer(customer_id)
 
         if not customer:
             return HTTPException(status_code=404, detail='Customer is not found')
 
-        await self.db_session.execute(delete(Customer).where(Customer.id == id))
+        await self.db_session.execute(delete(Customer).where(Customer.customer_id == customer_id))
         await self.db_session.commit()
         return customer
 
